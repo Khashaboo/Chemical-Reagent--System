@@ -7,7 +7,7 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="MARC Chemicals", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
 
 # Initialize Session State Memory (Temporary for Prototype)
 if 'demo_saved_data' not in st.session_state:
@@ -150,13 +150,19 @@ if view_mode == "📱 Mobile App View":
                 else:
                     status_color, status_icon, status_text, banner_gradient = "#4CAF50", "✅", "VALID", "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: TITLE (HARDCODED INLINE CSS) ---
-                st.markdown(f"<h4 style='text-align: center; color: #7D7D7D; font-size: 1rem; text-transform: uppercase; margin-bottom: -10px;'>🧪 Reagent Verification</h4>", unsafe_allow_html=True)
-                st.markdown(f"<h1 style='text-align: center; color: #1A1A1A; font-size: 2.5rem; font-weight: 900; margin-bottom: 25px;'>{chemical_name}</h1>", unsafe_allow_html=True)
-                
-                # --- NATIVE APP UI: CARDS ---
+                # --- NATIVE APP UI: HERO CARDS ---
                 st.markdown(
                     f"""
+                    <!-- PROFESSIONAL CHEMICAL NAME CARD -->
+                    <div style="background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 16px; padding: 15px 20px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 15px;">
+                        <div style="background: #F0F4F8; border-radius: 12px; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🧪</div>
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #888; font-weight: 700;">Chemical Name</div>
+                            <div style="font-size: 22px; font-weight: 900; color: #1A1A1A; margin-top: 2px; line-height: 1.2;">{chemical_name}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- BATCH NUMBER CARD -->
                     <div style="background: {banner_gradient}; border-radius: 16px; padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
                         <div>
                             <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 600;">Batch / Lot Number</div>
@@ -167,6 +173,7 @@ if view_mode == "📱 Mobile App View":
                     """, unsafe_allow_html=True
                 )
                 
+                # --- NATIVE APP UI: STATUS CARDS ---
                 st.markdown(
                     f"""
                     <div style="display: flex; gap: 15px; margin-bottom: 25px;">

@@ -1,4 +1,4 @@
-# 🧪 MARC Reagent Operating System
+# 🧪 BE Chemical Reagent Operating System
 
 A Lean Six Sigma (LSS) visual control dashboard for tracking laboratory reagent expiration dates and accessing safety documentation via mobile QR codes.
 

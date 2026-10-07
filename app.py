@@ -7,31 +7,89 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide")
+st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="centered")
 
-# Initialize Session State Memory (Simulates database writes for the demo)
+# Initialize Session State Memory
 if 'demo_saved_data' not in st.session_state:
     st.session_state.demo_saved_data = {}
 
-# 2. CLEAN CSS INJECTION
+# 2. MOBILE-FIRST ENTERPRISE CSS
 st.markdown("""
 <style>
-    .stApp { background-color: #F8F9FA; }
-    .logo-container { display: flex; align-items: center; margin-bottom: 2rem; }
+    /* App background */
+    .stApp { background-color: #F4F6F8; }
+    
+    /* Center the Logo Image */
+    [data-testid="stImage"] {
+        display: flex;
+        justify-content: center;
+        margin-bottom: -10px;
+    }
+    
+    /* Centered Mobile Typography */
+    .header-sub {
+        text-align: center;
+        color: #7D7D7D;
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 5px;
+    }
+    .header-title {
+        text-align: center;
+        color: #1A1A1A;
+        font-size: 2.2rem !important;
+        font-weight: 800;
+        line-height: 1.2;
+        margin-bottom: 25px;
+    }
+    
+    /* Native App Card Style for Batch Number */
+    .batch-card {
+        background-color: #FFFFFF;
+        padding: 25px 15px;
+        border-radius: 16px;
+        border-top: 6px solid #E65100;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    .batch-label {
+        margin: 0;
+        color: #8E8E8E;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .batch-value {
+        margin: 10px 0 0 0;
+        color: #E65100;
+        font-size: 2.4rem;
+        font-weight: 900;
+        letter-spacing: 1.5px;
+    }
+
+    /* Primary Button Styling */
     div.stButton > button[kind="primary"] {
         background-color: #E65100;
         color: white;
         border: none;
-        border-radius: 6px;
-        padding: 0.5rem 2rem;
-        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.6rem;
+        font-weight: 700;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 10px rgba(230,81,0,0.2);
     }
     div.stButton > button[kind="primary"]:hover {
         background-color: #BF360C;
     }
-    /* Hide default Streamlit elements */
+    
+    /* Hide Streamlit Watermarks */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -43,7 +101,6 @@ def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
     df.columns = df.columns.str.strip()
     
-    # Safely ensure critical columns exist
     critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date", "MSDS Link", "CoA Link"]
     for col in critical_cols:
         if col not in df.columns:
@@ -68,7 +125,7 @@ batch_scanned = query_params.get("batch")
 # ==========================================
 if batch_scanned:
     try:
-        st.image("marc_logo.png", width=150)
+        st.image("marc_logo.png", width=120)
     except:
         pass 
     
@@ -77,10 +134,8 @@ if batch_scanned:
     if reagent_row.empty:
         st.error(f"❌ Batch '{batch_scanned}' not found in the database.")
     else:
-        # Create a copy so we can apply our demo edits to it
         reagent = reagent_row.iloc[0].copy()
         
-        # Override with demo data if the user has hit 'Save'
         if batch_scanned in st.session_state.demo_saved_data:
             override = st.session_state.demo_saved_data[batch_scanned]
             reagent['Chemical Code'] = override['code']
@@ -89,29 +144,27 @@ if batch_scanned:
         
         current_open_date = safe_parse_date(reagent.get('Open Date', ''))
         current_exp_date = safe_parse_date(reagent.get('EXP Date', reagent.get('Exp Date', '')))
-        
         current_code = str(reagent.get('Chemical Code', ''))
         if current_code == "nan": current_code = ""
-        
         reagent_name = str(reagent.get('Reagent Name', 'Unknown Reagent'))
         if reagent_name == "nan": reagent_name = "Unknown Reagent"
 
-        # Header Section
-        st.subheader("🧪 Reagent Verification")
-        st.title(reagent_name)
+        # Centered Headers
+        st.markdown(f"<p class='header-sub'>🧪 Reagent Verification</p>", unsafe_allow_html=True)
+        st.markdown(f"<h1 class='header-title'>{reagent_name}</h1>", unsafe_allow_html=True)
         
-        # MAKE BATCH NUMBER HUGE AND CLEAR
+        # Native Mobile Card for Batch Number
         st.markdown(
             f"""
-            <div style="background-color: #EEEEEE; padding: 15px; border-radius: 8px; border-left: 6px solid #E65100; margin-bottom: 20px;">
-                <h3 style="margin: 0; color: #333;">🏷️ Batch/Lot Number:</h3>
-                <h1 style="margin: 0; color: #E65100; font-size: 2.5rem;">{batch_scanned}</h1>
+            <div class="batch-card">
+                <p class="batch-label">🏷️ Batch / Lot Number</p>
+                <h1 class="batch-value">{batch_scanned}</h1>
             </div>
             """, 
             unsafe_allow_html=True
         )
         
-        # Status Card (Poka-Yoke)
+        # Status Alert
         days_left = (current_exp_date - datetime.now().date()).days
         if days_left < 0:
             st.error(f"🚨 **EXPIRED** • {abs(days_left)} days ago • DO NOT USE", icon="🚫")
@@ -120,37 +173,34 @@ if batch_scanned:
         else:
             st.success(f"✅ **VALID** • {days_left} days remaining", icon="✅")
             
-        st.divider()
+        st.write("") # Spacer
         
-        # Editable Form Section
-        st.markdown("#### 📝 Update Reagent Details")
+        # Form
+        st.markdown("#### 📝 Edit Details")
         with st.form("edit_reagent_form", border=True):
-            new_code = st.text_input("Chemical Code (Editable)", value=current_code, placeholder="e.g., CHM-001")
+            new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
             
+            # Streamlit automatically stacks columns on small screens, ensuring inputs don't squeeze
             c1, c2 = st.columns(2)
             with c1:
                 new_open_date = st.date_input("Open Date", value=current_open_date)
             with c2:
-                new_exp_date = st.date_input("Exp Date (After Opening)", value=current_exp_date)
+                new_exp_date = st.date_input("Exp Date", value=current_exp_date)
                 
             submitted = st.form_submit_button("💾 Save Updates", type="primary", use_container_width=True)
-            
             if submitted:
-                # Save to session state as strings to avoid Pandas TypeError
                 st.session_state.demo_saved_data[batch_scanned] = {
                     'code': new_code,
                     'open_date': str(new_open_date),
                     'exp_date': str(new_exp_date)
                 }
-                # Rerun the app instantly to show the updated Red/Green status
                 st.rerun()
 
-        st.divider()
+        st.write("") # Spacer
         
-        # Documentation Section
-        st.markdown("#### 📑 Safety & Quality Documents")
+        # Documents
+        st.markdown("#### 📑 Safety Documents")
         d1, d2 = st.columns(2)
-        
         msds_val = str(reagent.get('MSDS Link', ''))
         coa_val = str(reagent.get('CoA Link', ''))
         
@@ -185,10 +235,9 @@ else:
     total_reagents = len(df)
     m1.metric(label="Total Active Batches", value=total_reagents)
     m2.metric(label="Compliance Status", value="Ready for Audit")
-    m3.metric(label="System Environment", value="First Prototype")
+    m3.metric(label="System Environment", value="Cloud Prototype")
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    
+    st.write("")
     search = st.text_input("🔍 Search by Reagent Name or Batch Number...", placeholder="Type to filter...")
     
     display_df = df.copy()

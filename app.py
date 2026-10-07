@@ -19,10 +19,10 @@ st.markdown("""
     /* App background */
     .stApp { background-color: #F4F6F8; }
     
-    /* Center the Logo Image */
+    /* Align Logo Image to the Top Left */
     [data-testid="stImage"] {
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;
         margin-bottom: -10px;
     }
     
@@ -35,6 +35,7 @@ st.markdown("""
         text-transform: uppercase;
         letter-spacing: 1.5px;
         margin-bottom: 5px;
+        margin-top: 20px;
     }
     .header-title {
         text-align: center;
@@ -180,7 +181,7 @@ if batch_scanned:
         with st.form("edit_reagent_form", border=True):
             new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
             
-            # Streamlit automatically stacks columns on small screens, ensuring inputs don't squeeze
+            # Streamlit automatically stacks columns on small screens
             c1, c2 = st.columns(2)
             with c1:
                 new_open_date = st.date_input("Open Date", value=current_open_date)

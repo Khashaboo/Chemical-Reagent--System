@@ -6,19 +6,14 @@ import ssl
 # Fix for internal network SSL
 ssl._create_default_https_context = ssl._create_unverified_context
 
-# 1. PAGE CONFIGURATION (Wide layout for professional look)
-st.set_page_config(page_title="MARC Reagents", page_icon="🧪", layout="wide")
+# 1. PAGE CONFIGURATION
+st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide")
 
 # 2. CLEAN CSS INJECTION
 st.markdown("""
 <style>
-    /* Clean up the main background and text */
     .stApp { background-color: #F8F9FA; }
-    
-    /* Make the logo alignment cleaner */
     .logo-container { display: flex; align-items: center; margin-bottom: 2rem; }
-    
-    /* Style the Save button with MARC colors */
     div.stButton > button[kind="primary"] {
         background-color: #E65100;
         color: white;
@@ -30,8 +25,6 @@ st.markdown("""
     div.stButton > button[kind="primary"]:hover {
         background-color: #BF360C;
     }
-    
-    /* Hide default Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
@@ -43,10 +36,16 @@ SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQopdi6UaQgJKJL
 @st.cache_data(ttl=30)
 def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
+    # Strip accidental spaces from headers
     df.columns = df.columns.str.strip()
+    
+    # Safely ensure critical columns exist so the app never crashes
+    critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date", "MSDS Link", "CoA Link"]
+    for col in critical_cols:
+        if col not in df.columns:
+            df[col] = ""
+            
     df["Batch\\Lot Number"] = df["Batch\\Lot Number"].astype(str).str.strip()
-    if "Chemical Code" not in df.columns:
-        df["Chemical Code"] = ""
     return df
 
 df = load_data()
@@ -61,10 +60,14 @@ query_params = st.query_params
 batch_scanned = query_params.get("batch")
 
 # ==========================================
-# MODE 1: MOBILE SCANNER VIEW (QR Triggered)
+# MODE 1: MOBILE SCANNER VIEW
 # ==========================================
 if batch_scanned:
-    st.image("marc_logo.png", width=150) # Smaller, aligned logo
+    # Safely load the logo if it exists
+    try:
+        st.image("marc_logo.png", width=150)
+    except:
+        pass 
     
     reagent_row = df[df['Batch\\Lot Number'] == batch_scanned]
     
@@ -73,14 +76,19 @@ if batch_scanned:
     else:
         reagent = reagent_row.iloc[0]
         
-        current_open_date = safe_parse_date(reagent['Open Date'])
-        current_exp_date = safe_parse_date(reagent['EXP Date'])
+        # Using .get() prevents KeyErrors if column names change slightly
+        current_open_date = safe_parse_date(reagent.get('Open Date', ''))
+        current_exp_date = safe_parse_date(reagent.get('EXP Date', reagent.get('Exp Date', '')))
+        
         current_code = str(reagent.get('Chemical Code', ''))
         if current_code == "nan": current_code = ""
+        
+        reagent_name = str(reagent.get('Reagent Name', 'Unknown Reagent'))
+        if reagent_name == "nan": reagent_name = "Unknown Reagent"
 
         # Header Section
         st.subheader("🧪 Reagent Verification")
-        st.title(reagent['Reagent Name'])
+        st.title(reagent_name)
         st.caption(f"**Batch/Lot:** {batch_scanned}")
         
         # Status Card (Poka-Yoke)
@@ -114,32 +122,37 @@ if batch_scanned:
         # Documentation Section
         st.markdown("#### 📑 Safety & Quality Documents")
         d1, d2 = st.columns(2)
+        
+        msds_val = str(reagent.get('MSDS Link', ''))
+        coa_val = str(reagent.get('CoA Link', ''))
+        
         with d1:
-            if pd.notna(reagent['MSDS Link']) and str(reagent['MSDS Link']).strip() != "":
-                st.link_button("📄 View MSDS", str(reagent['MSDS Link']), use_container_width=True)
+            if msds_val and msds_val.lower() != "nan":
+                st.link_button("📄 View MSDS", msds_val, use_container_width=True)
             else:
                 st.button("📄 MSDS Not Available", disabled=True, use_container_width=True)
         with d2:
-            if pd.notna(reagent['CoA Link']) and str(reagent['CoA Link']).strip() != "":
-                st.link_button("🔬 View CoA", str(reagent['CoA Link']), use_container_width=True)
+            if coa_val and coa_val.lower() != "nan":
+                st.link_button("🔬 View CoA", coa_val, use_container_width=True)
             else:
                 st.button("🔬 CoA Not Available", disabled=True, use_container_width=True)
 
 # ==========================================
-# MODE 2: DESKTOP DASHBOARD (Default View)
+# MODE 2: DESKTOP DASHBOARD
 # ==========================================
 else:
-    # Header Row
     col1, col2 = st.columns([1, 4])
     with col1:
-        st.image("marc_logo.png", width=180)
+        try:
+            st.image("marc_logo.png", width=180)
+        except:
+            pass
     with col2:
         st.title("Bioequivalence Lab Reagents")
         st.write("Centralized inventory management and compliance dashboard.")
     
     st.divider()
     
-    # Metrics Row
     m1, m2, m3 = st.columns(3)
     total_reagents = len(df)
     m1.metric(label="Total Active Batches", value=total_reagents)
@@ -148,7 +161,6 @@ else:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Search and Table
     search = st.text_input("🔍 Search by Reagent Name or Batch Number...", placeholder="Type to filter...")
     
     display_df = df.copy()
@@ -156,7 +168,6 @@ else:
         display_df = display_df[display_df['Reagent Name'].str.contains(search, case=False, na=False) | 
                                 display_df['Batch\\Lot Number'].str.contains(search, case=False, na=False)]
     
-    # Format the dataframe to look professional
     st.dataframe(
         display_df,
         use_container_width=True,

@@ -7,7 +7,7 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="BE Chemicals", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
 
 # Initialize Session State Memory (Temporary for Prototype)
 if 'demo_saved_data' not in st.session_state:
@@ -218,11 +218,11 @@ if view_mode == "📱 Mobile App View":
                     with c1:
                         new_open_date = st.date_input("Open Date", value=current_open_date)
                     with c2:
-                        new_exp_date = st.date_input("Exp Date", value=current_exp_date)
+                        # Updated the UI label to "Exp Date After openning" here
+                        new_exp_date = st.date_input("Exp Date After openning", value=current_exp_date)
                         
                     submitted = st.form_submit_button("💾 Save & Sign", type="primary", use_container_width=True)
                     if submitted:
-                        # Storing exactly with the matching Google Sheet keys
                         st.session_state.demo_saved_data[batch_scanned] = {
                             'Chemical Code': new_code,
                             'Open Date': str(new_open_date),

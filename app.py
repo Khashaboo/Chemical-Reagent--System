@@ -16,13 +16,8 @@ if 'demo_saved_data' not in st.session_state:
 # 2. ENTERPRISE CSS & APP STYLING
 st.markdown("""
 <style>
-    /* App background */
     .stApp { background-color: #F8F9FA; font-family: 'Segoe UI', Roboto, sans-serif; }
-    
-    /* Clean up the Top Header padding */
     .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
-    
-    /* Segmented Control / Radio Button Styling for the View Switcher */
     div.row-widget.stRadio > div {
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -30,8 +25,6 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         border: 1px solid #E0E0E0;
     }
-    
-    /* Primary Save Button */
     div.stButton > button[kind="primary"] {
         background: linear-gradient(135deg, #E65100, #F44336);
         color: white;
@@ -47,27 +40,34 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(230,81,0,0.4);
         transform: translateY(-1px);
     }
-    
-    /* Hide Streamlit Watermarks */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# 3. DATA LOADING
+# 3. DATA LOADING (Positional Fallback)
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQopdi6UaQgJKJLRVmblHEHX_691XJaPtk5E18SveGkWALreSCPUAw8uuC5rLNNCqNXSgVoDH7mc4PU/pub?output=csv"
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=10)
 def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
-    df.columns = df.columns.str.strip()
+    # Standardize columns to fixed positional names
+    expected_cols = [
+        "Chemical Name", 
+        "Batch\\Lot Number", 
+        "Open Date", 
+        "EXP Date After openning", 
+        "Chemical Code", 
+        "Opened By", 
+        "MSDS Link", 
+        "CoA Link"
+    ]
     
-    critical_cols = ["Batch\\Lot Number", "Chemical Code", "Chemical Name", "Open Date", "EXP Date After openning", "Opened By", "MSDS Link", "CoA Link"]
-    for col in critical_cols:
-        if col not in df.columns:
-            df[col] = ""
-            
+    # Map columns by position if headers differ
+    if len(df.columns) >= len(expected_cols):
+        df.columns = expected_cols + list(df.columns[len(expected_cols):])
+    
     df["Batch\\Lot Number"] = df["Batch\\Lot Number"].astype(str).str.strip()
     return df
 
@@ -82,7 +82,6 @@ def safe_parse_date(date_val):
 query_params = st.query_params
 batch_scanned = query_params.get("batch")
 
-# Team Members List
 team_members = [
     "Not Signed", 
     "ElZahraa Mostafa", 
@@ -140,19 +139,19 @@ if view_mode == "📱 Mobile App View":
                 
                 if batch_scanned in st.session_state.demo_saved_data:
                     override = st.session_state.demo_saved_data[batch_scanned]
+                    reagent['Chemical Name'] = override['Chemical Name']
                     reagent['Chemical Code'] = override['Chemical Code']
-                    reagent['Chemical Name'] = override.get('Chemical Name', reagent.get('Chemical Name', ''))
                     reagent['Open Date'] = override['Open Date']
                     reagent['EXP Date After openning'] = override['EXP Date After openning']
                     reagent['Opened By'] = override['Opened By']
                 
                 current_open_date = safe_parse_date(reagent.get('Open Date', ''))
-                current_exp_date = safe_parse_date(reagent.get('EXP Date After openning', reagent.get('EXP Date', '')))
+                current_exp_date = safe_parse_date(reagent.get('EXP Date After openning', ''))
                 
                 current_code = str(reagent.get('Chemical Code', ''))
                 if current_code == "nan": current_code = ""
                 
-                # Robust extraction of Chemical Name
+                # Guaranteed extraction from Column A
                 chemical_name = str(reagent.get('Chemical Name', '')).strip()
                 if not chemical_name or chemical_name.lower() == "nan":
                     chemical_name = "Reagent Verification"
@@ -175,7 +174,7 @@ if view_mode == "📱 Mobile App View":
                     status_color, status_icon, status_text = "#4CAF50", "✅", "VALID"
                     banner_gradient = "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: HERO SECTION (PROMINENT CHEMICAL NAME) ---
+                # --- NATIVE APP UI: HERO SECTION ---
                 st.markdown(f"<p style='text-align: center; color: #7D7D7D; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0px;'>🧪 Reagent Verification</p>", unsafe_allow_html=True)
                 st.markdown(f"<h1 style='text-align: center; color: #1A1A1A; font-size: 2.2rem !important; font-weight: 800; margin-bottom: 20px;'>{chemical_name}</h1>", unsafe_allow_html=True)
                 

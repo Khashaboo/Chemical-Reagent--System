@@ -47,11 +47,9 @@ def load_data():
         "Chemical Code", "Opened By", "MSDS Link", "CoA Link"
     ]
     
-    # Safely rename whatever columns exist
     rename_dict = {df.columns[i]: expected_cols[i] for i in range(min(len(df.columns), len(expected_cols)))}
     df.rename(columns=rename_dict, inplace=True)
     
-    # Ensure Batch_Number column exists before formatting
     if "Batch_Number" in df.columns:
         df["Batch_Number"] = df["Batch_Number"].astype(str).str.strip()
     return df
@@ -150,11 +148,10 @@ if view_mode == "📱 Mobile App View":
                 else:
                     status_color, status_icon, status_text, banner_gradient = "#4CAF50", "✅", "VALID", "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: MASTER UNIFIED CARD ---
+                # --- NATIVE APP UI: MASTER UNIFIED CARD (FIXED HTML) ---
                 st.markdown(
                     f"""
                     <div style="background: {banner_gradient}; border-radius: 16px; padding: 25px; color: white; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
-                        <!-- Chemical Name Section -->
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.25); padding-bottom: 15px; margin-bottom: 15px;">
                             <div>
                                 <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;">Chemical Name</div>
@@ -162,12 +159,10 @@ if view_mode == "📱 Mobile App View":
                             </div>
                             <div style="background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🧪</div>
                         </div>
-                        
-                        <!-- Batch Number Section -->
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;">Batch / Lot Number</div>
-                                <div style="font-size: 20px; font-weight: 900; letter-spacing: 1px; margin-top: 4px;">{batch_scanned}</div>
+                                <div style="font-size: 22px; font-weight: 900; letter-spacing: 1px; margin-top: 4px;">{batch_scanned}</div>
                             </div>
                             <div style="background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🏷️</div>
                         </div>

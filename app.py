@@ -63,8 +63,8 @@ def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
     df.columns = df.columns.str.strip()
     
-    # Matching exact column names from Google Sheet, using "Opened By"
-    critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date After openning", "Opened By", "MSDS Link", "CoA Link"]
+    # Updated to look for "Chemical Name" instead of "Reagent Name"
+    critical_cols = ["Batch\\Lot Number", "Chemical Code", "Chemical Name", "Open Date", "EXP Date After openning", "Opened By", "MSDS Link", "CoA Link"]
     for col in critical_cols:
         if col not in df.columns:
             df[col] = ""
@@ -139,7 +139,7 @@ if view_mode == "📱 Mobile App View":
             else:
                 reagent = reagent_row.iloc[0].copy()
                 
-                # Load temporary edits using exact Google Sheet column names
+                # Load temporary edits using updated keys
                 if batch_scanned in st.session_state.demo_saved_data:
                     override = st.session_state.demo_saved_data[batch_scanned]
                     reagent['Chemical Code'] = override['Chemical Code']
@@ -154,8 +154,9 @@ if view_mode == "📱 Mobile App View":
                 current_code = str(reagent.get('Chemical Code', ''))
                 if current_code == "nan": current_code = ""
                 
-                reagent_name = str(reagent.get('Reagent Name', 'Unknown Reagent'))
-                if reagent_name == "nan": reagent_name = "Unknown Reagent"
+                # Read Chemical Name instead of Reagent Name
+                chemical_name = str(reagent.get('Chemical Name', 'Unknown Chemical'))
+                if chemical_name == "nan": chemical_name = "Unknown Chemical"
                 
                 # Fetch "Opened By" data
                 current_opened_by = str(reagent.get('Opened By', 'Not Signed')).strip()
@@ -178,7 +179,7 @@ if view_mode == "📱 Mobile App View":
                     banner_gradient = "linear-gradient(135deg, #43A047, #2E7D32)"
 
                 # --- NATIVE APP UI: HERO SECTION ---
-                st.markdown(f"<h2 style='text-align: center; margin-bottom: 20px; color: #1E1E1E; font-weight: 800;'>{reagent_name}</h2>", unsafe_allow_html=True)
+                st.markdown(f"<h2 style='text-align: center; margin-bottom: 20px; color: #1E1E1E; font-weight: 800;'>{chemical_name}</h2>", unsafe_allow_html=True)
                 
                 st.markdown(
                     f"""
@@ -218,7 +219,6 @@ if view_mode == "📱 Mobile App View":
                     with c1:
                         new_open_date = st.date_input("Open Date", value=current_open_date)
                     with c2:
-                        # Updated the UI label to "Exp Date After openning" here
                         new_exp_date = st.date_input("Exp Date After openning", value=current_exp_date)
                         
                     submitted = st.form_submit_button("💾 Save & Sign", type="primary", use_container_width=True)
@@ -264,11 +264,11 @@ else:
     m3.metric(label="System Environment", value="Cloud Prototype")
     
     st.write("")
-    search = st.text_input("🔍 Search by Reagent Name or Batch Number...", placeholder="Type to filter...")
+    search = st.text_input("🔍 Search by Chemical Name or Batch Number...", placeholder="Type to filter...")
     
     display_df = df.copy()
     if search:
-        display_df = display_df[display_df['Reagent Name'].str.contains(search, case=False, na=False) | 
+        display_df = display_df[display_df['Chemical Name'].str.contains(search, case=False, na=False) | 
                                 display_df['Batch\\Lot Number'].str.contains(search, case=False, na=False)]
     
     st.dataframe(

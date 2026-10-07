@@ -148,43 +148,13 @@ if view_mode == "📱 Mobile App View":
                 else:
                     status_color, status_icon, status_text, banner_gradient = "#4CAF50", "✅", "VALID", "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: MASTER UNIFIED CARD (FIXED HTML) ---
-                st.markdown(
-                    f"""
-                    <div style="background: {banner_gradient}; border-radius: 16px; padding: 25px; color: white; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.25); padding-bottom: 15px; margin-bottom: 15px;">
-                            <div>
-                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;">Chemical Name</div>
-                                <div style="font-size: 24px; font-weight: 900; letter-spacing: 0.5px; margin-top: 4px; line-height: 1.2;">{chemical_name}</div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🧪</div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;">Batch / Lot Number</div>
-                                <div style="font-size: 22px; font-weight: 900; letter-spacing: 1px; margin-top: 4px;">{batch_scanned}</div>
-                            </div>
-                            <div style="background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🏷️</div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True
-                )
+                # --- NATIVE APP UI: MASTER UNIFIED CARD (SINGLE LINE HTML - UNBREAKABLE) ---
+                unified_card_html = f"<div style='background: {banner_gradient}; border-radius: 16px; padding: 25px; color: white; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);'><div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.25); padding-bottom: 15px; margin-bottom: 15px;'><div><div style='font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;'>Chemical Name</div><div style='font-size: 24px; font-weight: 900; letter-spacing: 0.5px; margin-top: 4px; line-height: 1.2;'>{chemical_name}</div></div><div style='background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;'>🧪</div></div><div style='display: flex; justify-content: space-between; align-items: center;'><div><div style='font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;'>Batch / Lot Number</div><div style='font-size: 22px; font-weight: 900; letter-spacing: 1px; margin-top: 4px;'>{batch_scanned}</div></div><div style='background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;'>🏷️</div></div></div>"
+                st.markdown(unified_card_html, unsafe_allow_html=True)
                 
-                # --- NATIVE APP UI: STATUS CARDS ---
-                st.markdown(
-                    f"""
-                    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
-                        <div style="flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;">
-                            <div style="font-size: 28px; margin-bottom: 5px; color: {status_color};">{status_icon}</div>
-                            <div style="font-size: 13px; font-weight: 800; color: #333; letter-spacing: 0.5px;">{status_text}</div>
-                        </div>
-                        <div style="flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;">
-                            <div style="font-size: 24px; font-weight: 900; color: {status_color}; margin-bottom: 2px;">{abs_days_left}</div>
-                            <div style="font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.5px; text-transform: uppercase;">Days {days_label}</div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True
-                )
+                # --- NATIVE APP UI: STATUS CARDS (SINGLE LINE HTML - UNBREAKABLE) ---
+                status_cards_html = f"<div style='display: flex; gap: 15px; margin-bottom: 25px;'><div style='flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;'><div style='font-size: 28px; margin-bottom: 5px; color: {status_color};'>{status_icon}</div><div style='font-size: 13px; font-weight: 800; color: #333; letter-spacing: 0.5px;'>{status_text}</div></div><div style='flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;'><div style='font-size: 24px; font-weight: 900; color: {status_color}; margin-bottom: 2px;'>{abs_days_left}</div><div style='font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.5px; text-transform: uppercase;'>Days {days_label}</div></div></div>"
+                st.markdown(status_cards_html, unsafe_allow_html=True)
                 
                 # --- NATIVE APP UI: EDIT FORM ---
                 st.markdown("#### 📝 Edit Details")

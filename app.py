@@ -1,5 +1,6 @@
 import html
 import os
+import re
 import ssl
 import urllib.error
 import urllib.request
@@ -25,10 +26,14 @@ if "demo_saved_data" not in st.session_state:
 # ==========================================
 # 2. CONSTANTS
 # ==========================================
-SHEET_CSV_URL = os.environ.get(
-    "SHEET_CSV_URL",
-    "https://docs.google.com/spreadsheets/d/e/2PACX-1vQopdi6UaQgJKJLRVmblHEHX_691XJaPtk5E18SveGkWALreSCPUAw8uuC5rLNNCqNXSgVoDH7mc4PU/pub?output=csv",
-)
+SHEET_ID = "1mfteEKngJV58MxbozXLO_t3ChxI8WsCLinWFMtqpAyo"  # Reagent_Inventory_Master
+SHEET_CSV_URLS = [
+    u for u in [
+        os.environ.get("SHEET_CSV_URL", "").strip(),  # optional override (env var / Streamlit secret)
+        f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0",
+        "https://docs.google.com/spreadsheets/d/e/2PACX-1vQopdi6UaQgJKJLRVmblHEHX_691XJaPtk5E18SveGkWALreSCPUAw8uuC5rLNNCqNXSgVoDH7mc4PU/pub?output=csv",
+    ] if u
+]
 
 # Internal names, assigned strictly by column position in the sheet
 COLUMNS = [
@@ -37,6 +42,7 @@ COLUMNS = [
 ]
 COL_NAME, COL_BATCH, COL_OPEN, COL_EXP, COL_CODE, COL_BY, COL_MSDS, COL_COA = COLUMNS
 
+BUILD_ID = "2026-10-07-v3"  # bump when you redeploy; shown under the header
 WARNING_DAYS = 7
 NOT_SIGNED = "Not Signed"
 TEAM_MEMBERS = [
@@ -77,15 +83,17 @@ st.markdown("""
 # 4. HELPERS
 # ==========================================
 def render_html(markup: str) -> None:
-    """Render HTML safely inside st.markdown.
+    """Render HTML cards without Markdown ever touching them.
 
-    ROOT CAUSE of the 'batch number shows as code' bug: Markdown treats any
-    line indented by 4+ spaces as a code block, so indented multi-line HTML is
-    printed as raw text. Stripping every line's indentation removes the problem
-    and lets us keep the HTML readable in the source.
+    Markdown turns lines indented 4+ spaces into code blocks, which is what
+    printed the raw <div> tags. We strip indentation AND use st.html (which
+    skips the Markdown parser) when the Streamlit version has it.
     """
     flat = "".join(line.strip() for line in markup.splitlines())
-    st.markdown(flat, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(flat)
+    else:
+        st.markdown(flat, unsafe_allow_html=True)
 
 
 def esc(value) -> str:
@@ -146,14 +154,55 @@ def _download_csv(url: str) -> str:
         raise
 
 
+ALIASES = {
+    "chemicalname": COL_NAME,
+    "batchnumber": COL_BATCH, "batchlotnumber": COL_BATCH, "lotnumber": COL_BATCH, "batch": COL_BATCH,
+    "opendate": COL_OPEN,
+    "expdateafteropenning": COL_EXP, "expdateafteropening": COL_EXP, "expdate": COL_EXP,
+    "chemicalcode": COL_CODE,
+    "openedby": COL_BY,
+    "msdslink": COL_MSDS, "coalink": COL_COA,
+}
+
+
+def _norm(header) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(header).lower())
+
+
+def map_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Match sheet headers by name (so 'Batch\\Lot Number' works); if the names
+    can't all be matched, fall back to column position."""
+    by_name = {}
+    for col in df.columns:
+        key = ALIASES.get(_norm(col))
+        if key and key not in by_name.values():
+            by_name[col] = key
+    if set(by_name.values()) == set(COLUMNS):
+        return df.rename(columns=by_name)
+    positional = {df.columns[i]: COLUMNS[i] for i in range(min(len(df.columns), len(COLUMNS)))}
+    return df.rename(columns=positional)
+
+
+def _fetch_first_working() -> str:
+    errors = []
+    for url in SHEET_CSV_URLS:
+        try:
+            raw = _download_csv(url)
+            # Google returns a sign-in HTML page (HTTP 200) when a sheet isn't shared
+            if raw.lstrip()[:15].lower().startswith(("<!doctype html", "<html")):
+                raise ValueError("sheet is not shared publicly (got a sign-in page)")
+            return raw
+        except Exception as exc:  # try the next source
+            errors.append(f"{url[:60]}...: {exc}")
+    raise RuntimeError(" | ".join(errors))
+
+
 @st.cache_data(ttl=30, show_spinner=False)
 def load_data() -> pd.DataFrame:
-    raw = _download_csv(SHEET_CSV_URL)
+    raw = _fetch_first_working()
     # dtype=str keeps batch numbers exactly as typed (no 1267 -> 1267.0, no lost zeros)
     df = pd.read_csv(StringIO(raw), dtype=str).dropna(how="all")
-
-    rename = {df.columns[i]: COLUMNS[i] for i in range(min(len(df.columns), len(COLUMNS)))}
-    df = df.rename(columns=rename)
+    df = map_columns(df)
     for col in COLUMNS:
         if col not in df.columns:
             df[col] = ""
@@ -224,6 +273,7 @@ with col_toggle:
 
 st.write("")
 st.divider()
+st.caption(f"Build: {BUILD_ID}")
 
 # ==========================================
 # MODE 1: MOBILE APP VIEW

@@ -63,7 +63,7 @@ def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
     df.columns = df.columns.str.strip()
     
-    # Updated to match the exact column names from your new Google Sheet structure
+    # Matching exact column names from Google Sheet
     critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date After openning", "Signature", "MSDS Link", "CoA Link"]
     for col in critical_cols:
         if col not in df.columns:
@@ -147,7 +147,7 @@ if view_mode == "📱 Mobile App View":
                     reagent['EXP Date After openning'] = override['exp_date']
                     reagent['Signature'] = override['signature']
                 
-                # Safely parse updated column names
+                # Parse Dates safely
                 current_open_date = safe_parse_date(reagent.get('Open Date', ''))
                 current_exp_date = safe_parse_date(reagent.get('EXP Date After openning', reagent.get('EXP Date', '')))
                 
@@ -161,7 +161,10 @@ if view_mode == "📱 Mobile App View":
                 if current_sig == "nan" or current_sig == "": current_sig = "Not Signed"
                 sig_index = signatures_list.index(current_sig) if current_sig in signatures_list else 0
 
+                # Date calculations executed OUTSIDE of the f-string to prevent SyntaxErrors
                 days_left = (current_exp_date - datetime.now().date()).days
+                abs_days_left = abs(days_left)
+                days_label = "Remaining" if days_left >= 0 else "Ago"
                 
                 if days_left < 0:
                     status_color, status_icon, status_text = "#F44336", "🚨", "EXPIRED"
@@ -183,4 +186,95 @@ if view_mode == "📱 Mobile App View":
                             <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 600;">Batch / Lot Number</div>
                             <div style="font-size: 26px; font-weight: 900; letter-spacing: 1px; margin-top: 5px;">{batch_scanned}</div>
                         </div>
-                        <div style="background: rgba(255,255,255,
+                        <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🏷️</div>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+                
+                st.markdown(
+                    f"""
+                    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                        <div style="flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;">
+                            <div style="font-size: 28px; margin-bottom: 5px; color: {status_color};">{status_icon}</div>
+                            <div style="font-size: 13px; font-weight: 800; color: #333; letter-spacing: 0.5px;">{status_text}</div>
+                        </div>
+                        <div style="flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;">
+                            <div style="font-size: 24px; font-weight: 900; color: {status_color}; margin-bottom: 2px;">{abs_days_left}</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.5px; text-transform: uppercase;">Days {days_label}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+                
+                # --- NATIVE APP UI: EDIT FORM ---
+                st.markdown("#### 📝 Edit Details")
+                with st.form("edit_reagent_form", border=True):
+                    
+                    new_signature = st.selectbox("Analyst Signature (Required)", signatures_list, index=sig_index)
+                    new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        new_open_date = st.date_input("Open Date", value=current_open_date)
+                    with c2:
+                        new_exp_date = st.date_input("Exp Date", value=current_exp_date)
+                        
+                    submitted = st.form_submit_button("💾 Save & Sign", type="primary", use_container_width=True)
+                    if submitted:
+                        st.session_state.demo_saved_data[batch_scanned] = {
+                            'code': new_code,
+                            'open_date': str(new_open_date),
+                            'exp_date': str(new_exp_date),
+                            'signature': new_signature
+                        }
+                        st.rerun()
+
+                st.write("") 
+                
+                # --- NATIVE APP UI: DOCUMENTS ---
+                st.markdown("#### 📑 Safety Documents")
+                d1, d2 = st.columns(2)
+                msds_val = str(reagent.get('MSDS Link', ''))
+                coa_val = str(reagent.get('CoA Link', ''))
+                
+                with d1:
+                    if msds_val and msds_val.lower() != "nan":
+                        st.link_button("📄 View MSDS", msds_val, use_container_width=True)
+                    else:
+                        st.button("📄 MSDS Not Available", disabled=True, use_container_width=True)
+                with d2:
+                    if coa_val and coa_val.lower() != "nan":
+                        st.link_button("🔬 View CoA", coa_val, use_container_width=True)
+                    else:
+                        st.button("🔬 CoA Not Available", disabled=True, use_container_width=True)
+
+# ==========================================
+# MODE 2: DESKTOP DASHBOARD VIEW
+# ==========================================
+else:
+    st.title("Bioequivalence Lab Reagents")
+    st.write("Centralized inventory management and compliance dashboard.")
+    
+    m1, m2, m3 = st.columns(3)
+    total_reagents = len(df)
+    m1.metric(label="Total Active Batches", value=total_reagents)
+    m2.metric(label="Compliance Status", value="Ready for Audit")
+    m3.metric(label="System Environment", value="Cloud Prototype")
+    
+    st.write("")
+    search = st.text_input("🔍 Search by Reagent Name or Batch Number...", placeholder="Type to filter...")
+    
+    display_df = df.copy()
+    if search:
+        display_df = display_df[display_df['Reagent Name'].str.contains(search, case=False, na=False) | 
+                                display_df['Batch\\Lot Number'].str.contains(search, case=False, na=False)]
+    
+    st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "MSDS Link": st.column_config.LinkColumn("MSDS", display_text="Open Document"),
+            "CoA Link": st.column_config.LinkColumn("CoA", display_text="Open Document"),
+        }
+    )

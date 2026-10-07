@@ -7,47 +7,25 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="MARC Chemicals", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
 
 # Initialize Session State Memory (Temporary for Prototype)
 if 'demo_saved_data' not in st.session_state:
     st.session_state.demo_saved_data = {}
 
-# 2. ENTERPRISE CSS & APP STYLING
+# 2. APP STYLING
 st.markdown("""
 <style>
     .stApp { background-color: #F8F9FA; font-family: 'Segoe UI', Roboto, sans-serif; }
     .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
-    
-    /* Hero Title Styling - Safe from mobile HTML sanitization */
-    .hero-sub {
-        text-align: center; color: #7D7D7D; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px;
-    }
-    .hero-title {
-        text-align: center; color: #1A1A1A; font-size: 2.2rem !important; font-weight: 900; margin-bottom: 20px; line-height: 1.2;
-    }
-    
     div.row-widget.stRadio > div {
-        background-color: #FFFFFF;
-        border-radius: 12px;
-        padding: 5px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        border: 1px solid #E0E0E0;
+        background-color: #FFFFFF; border-radius: 12px; padding: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #E0E0E0;
     }
     div.stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #E65100, #F44336);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 0.75rem;
-        font-weight: 700;
-        font-size: 1.1rem;
-        box-shadow: 0 4px 12px rgba(230,81,0,0.3);
-        transition: all 0.3s ease;
+        background: linear-gradient(135deg, #E65100, #F44336); color: white; border: none; border-radius: 12px; padding: 0.75rem; font-weight: 700; font-size: 1.1rem; box-shadow: 0 4px 12px rgba(230,81,0,0.3); transition: all 0.3s ease;
     }
     div.stButton > button[kind="primary"]:hover {
-        box-shadow: 0 6px 16px rgba(230,81,0,0.4);
-        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(230,81,0,0.4); transform: translateY(-1px);
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -55,31 +33,28 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. DATA LOADING (Positional Fallback)
+# 3. BULLETPROOF DATA LOADING
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQopdi6UaQgJKJLRVmblHEHX_691XJaPtk5E18SveGkWALreSCPUAw8uuC5rLNNCqNXSgVoDH7mc4PU/pub?output=csv"
 
 @st.cache_data(ttl=10)
 def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
-    df.dropna(how='all', inplace=True) # Drop any accidental blank rows
+    df.dropna(how='all', inplace=True)
     
-    # Standardize columns to fixed positional names
-    expected_cols = [
-        "Chemical Name", 
-        "Batch\\Lot Number", 
-        "Open Date", 
-        "EXP Date After openning", 
-        "Chemical Code", 
-        "Opened By", 
-        "MSDS Link", 
-        "CoA Link"
-    ]
+    # Force EXACT internal column names based on column position (Immune to Google Sheet header typos)
+    if len(df.columns) >= 8:
+        df.columns = [
+            "Chemical Name", 
+            "Batch_Number", 
+            "Open Date", 
+            "EXP Date After openning", 
+            "Chemical Code", 
+            "Opened By", 
+            "MSDS Link", 
+            "CoA Link"
+        ] + list(df.columns[8:])
     
-    # Map columns by position if headers differ
-    if len(df.columns) >= len(expected_cols):
-        df.columns = expected_cols + list(df.columns[len(expected_cols):])
-    
-    df["Batch\\Lot Number"] = df["Batch\\Lot Number"].astype(str).str.strip()
+    df["Batch_Number"] = df["Batch_Number"].astype(str).str.strip()
     return df
 
 df = load_data()
@@ -94,20 +69,12 @@ query_params = st.query_params
 batch_scanned = query_params.get("batch")
 
 team_members = [
-    "Not Signed", 
-    "ElZahraa Mostafa", 
-    "Osama Gamal", 
-    "Mariam Sabry", 
-    "Marina Mamdouh", 
-    "Marina Shafik", 
-    "Mohamed Ragab", 
-    "Youssef Ahmed", 
-    "Amr Hazem", 
-    "Omar Ahmed"
+    "Not Signed", "ElZahraa Mostafa", "Osama Gamal", "Mariam Sabry", "Marina Mamdouh", 
+    "Marina Shafik", "Mohamed Ragab", "Youssef Ahmed", "Amr Hazem", "Omar Ahmed"
 ]
 
 # ==========================================
-# HEADER: LOGO (TOP LEFT) & VIEW SWITCHER
+# HEADER: LOGO & VIEW SWITCHER
 # ==========================================
 col_logo, col_spacer, col_toggle = st.columns([1, 1, 2])
 with col_logo:
@@ -138,17 +105,17 @@ if view_mode == "📱 Mobile App View":
     
     with app_col:
         if not batch_scanned:
-            batch_scanned = st.selectbox("🔍 Select or search for a Batch Number:", df["Batch\\Lot Number"].tolist())
+            batch_scanned = st.selectbox("🔍 Select or search for a Batch Number:", df["Batch_Number"].tolist())
             
         if batch_scanned:
-            reagent_row = df[df['Batch\\Lot Number'] == batch_scanned]
+            reagent_row = df[df['Batch_Number'] == batch_scanned]
             
             if reagent_row.empty:
                 st.error(f"❌ Batch '{batch_scanned}' not found.")
             else:
                 reagent = reagent_row.iloc[0].copy()
                 
-                # Load temporary overrides with .get() safety
+                # Apply Demo Overrides
                 if batch_scanned in st.session_state.demo_saved_data:
                     override = st.session_state.demo_saved_data[batch_scanned]
                     reagent['Chemical Name'] = override.get('Chemical Name', reagent.get('Chemical Name', ''))
@@ -157,16 +124,16 @@ if view_mode == "📱 Mobile App View":
                     reagent['EXP Date After openning'] = override.get('EXP Date After openning', reagent.get('EXP Date After openning', ''))
                     reagent['Opened By'] = override.get('Opened By', reagent.get('Opened By', ''))
                 
-                current_open_date = safe_parse_date(reagent.get('Open Date', ''))
-                current_exp_date = safe_parse_date(reagent.get('EXP Date After openning', ''))
-                
+                # Robust extraction
+                chemical_name = str(reagent.get('Chemical Name', '')).strip()
+                if not chemical_name or chemical_name.lower() == "nan":
+                    chemical_name = "Unknown Chemical"
+                    
                 current_code = str(reagent.get('Chemical Code', ''))
                 if current_code == "nan": current_code = ""
                 
-                # Guaranteed extraction from Column A
-                chemical_name = str(reagent.get('Chemical Name', '')).strip()
-                if not chemical_name or chemical_name.lower() == "nan":
-                    chemical_name = "Reagent Verification"
+                current_open_date = safe_parse_date(reagent.get('Open Date', ''))
+                current_exp_date = safe_parse_date(reagent.get('EXP Date After openning', ''))
                 
                 current_opened_by = str(reagent.get('Opened By', 'Not Signed')).strip()
                 if current_opened_by == "nan" or current_opened_by == "": current_opened_by = "Not Signed"
@@ -177,19 +144,17 @@ if view_mode == "📱 Mobile App View":
                 days_label = "Remaining" if days_left >= 0 else "Ago"
                 
                 if days_left < 0:
-                    status_color, status_icon, status_text = "#F44336", "🚨", "EXPIRED"
-                    banner_gradient = "linear-gradient(135deg, #D32F2F, #B71C1C)"
+                    status_color, status_icon, status_text, banner_gradient = "#F44336", "🚨", "EXPIRED", "linear-gradient(135deg, #D32F2F, #B71C1C)"
                 elif days_left <= 7:
-                    status_color, status_icon, status_text = "#FF9800", "⚠️", "WARNING"
-                    banner_gradient = "linear-gradient(135deg, #F57C00, #E65100)"
+                    status_color, status_icon, status_text, banner_gradient = "#FF9800", "⚠️", "WARNING", "linear-gradient(135deg, #F57C00, #E65100)"
                 else:
-                    status_color, status_icon, status_text = "#4CAF50", "✅", "VALID"
-                    banner_gradient = "linear-gradient(135deg, #43A047, #2E7D32)"
+                    status_color, status_icon, status_text, banner_gradient = "#4CAF50", "✅", "VALID", "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: HERO SECTION (BULLETPROOF TITLE) ---
-                st.markdown(f"<div class='hero-sub'>🧪 Reagent Verification</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='hero-title'>{chemical_name}</div>", unsafe_allow_html=True)
+                # --- NATIVE APP UI: TITLE (HARDCODED INLINE CSS) ---
+                st.markdown(f"<h4 style='text-align: center; color: #7D7D7D; font-size: 1rem; text-transform: uppercase; margin-bottom: -10px;'>🧪 Reagent Verification</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h1 style='text-align: center; color: #1A1A1A; font-size: 2.5rem; font-weight: 900; margin-bottom: 25px;'>{chemical_name}</h1>", unsafe_allow_html=True)
                 
+                # --- NATIVE APP UI: CARDS ---
                 st.markdown(
                     f"""
                     <div style="background: {banner_gradient}; border-radius: 16px; padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
@@ -220,7 +185,6 @@ if view_mode == "📱 Mobile App View":
                 # --- NATIVE APP UI: EDIT FORM ---
                 st.markdown("#### 📝 Edit Details")
                 with st.form("edit_reagent_form", border=True):
-                    
                     new_opened_by = st.selectbox("Opened by:", team_members, index=opened_by_index)
                     new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
                     
@@ -279,7 +243,7 @@ else:
     display_df = df.copy()
     if search:
         display_df = display_df[display_df['Chemical Name'].str.contains(search, case=False, na=False) | 
-                                display_df['Batch\\Lot Number'].str.contains(search, case=False, na=False)]
+                                display_df['Batch_Number'].str.contains(search, case=False, na=False)]
     
     st.dataframe(
         display_df,

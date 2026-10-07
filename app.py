@@ -41,20 +41,19 @@ def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
     df.dropna(how='all', inplace=True)
     
-    # Force EXACT internal column names based on column position (Immune to Google Sheet header typos)
-    if len(df.columns) >= 8:
-        df.columns = [
-            "Chemical Name", 
-            "Batch_Number", 
-            "Open Date", 
-            "EXP Date After openning", 
-            "Chemical Code", 
-            "Opened By", 
-            "MSDS Link", 
-            "CoA Link"
-        ] + list(df.columns[8:])
+    # Force internal column names based strictly on position, regardless of sheet size
+    expected_cols = [
+        "Chemical Name", "Batch_Number", "Open Date", "EXP Date After openning", 
+        "Chemical Code", "Opened By", "MSDS Link", "CoA Link"
+    ]
     
-    df["Batch_Number"] = df["Batch_Number"].astype(str).str.strip()
+    # Safely rename whatever columns exist
+    rename_dict = {df.columns[i]: expected_cols[i] for i in range(min(len(df.columns), len(expected_cols)))}
+    df.rename(columns=rename_dict, inplace=True)
+    
+    # Ensure Batch_Number column exists before formatting
+    if "Batch_Number" in df.columns:
+        df["Batch_Number"] = df["Batch_Number"].astype(str).str.strip()
     return df
 
 df = load_data()
@@ -104,8 +103,9 @@ if view_mode == "📱 Mobile App View":
     _, app_col, _ = st.columns([1, 2, 1])
     
     with app_col:
+        batch_list = df["Batch_Number"].tolist() if "Batch_Number" in df.columns else []
         if not batch_scanned:
-            batch_scanned = st.selectbox("🔍 Select or search for a Batch Number:", df["Batch_Number"].tolist())
+            batch_scanned = st.selectbox("🔍 Select or search for a Batch Number:", batch_list)
             
         if batch_scanned:
             reagent_row = df[df['Batch_Number'] == batch_scanned]
@@ -150,25 +150,27 @@ if view_mode == "📱 Mobile App View":
                 else:
                     status_color, status_icon, status_text, banner_gradient = "#4CAF50", "✅", "VALID", "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: HERO CARDS ---
+                # --- NATIVE APP UI: MASTER UNIFIED CARD ---
                 st.markdown(
                     f"""
-                    <!-- PROFESSIONAL CHEMICAL NAME CARD -->
-                    <div style="background-color: #FFFFFF; border: 1px solid #EBEBEB; border-radius: 16px; padding: 15px 20px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 15px;">
-                        <div style="background: #F0F4F8; border-radius: 12px; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🧪</div>
-                        <div>
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: #888; font-weight: 700;">Chemical Name</div>
-                            <div style="font-size: 22px; font-weight: 900; color: #1A1A1A; margin-top: 2px; line-height: 1.2;">{chemical_name}</div>
+                    <div style="background: {banner_gradient}; border-radius: 16px; padding: 25px; color: white; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+                        <!-- Chemical Name Section -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.25); padding-bottom: 15px; margin-bottom: 15px;">
+                            <div>
+                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;">Chemical Name</div>
+                                <div style="font-size: 24px; font-weight: 900; letter-spacing: 0.5px; margin-top: 4px; line-height: 1.2;">{chemical_name}</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🧪</div>
                         </div>
-                    </div>
-                    
-                    <!-- BATCH NUMBER CARD -->
-                    <div style="background: {banner_gradient}; border-radius: 16px; padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-                        <div>
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 600;">Batch / Lot Number</div>
-                            <div style="font-size: 26px; font-weight: 900; letter-spacing: 1px; margin-top: 5px;">{batch_scanned}</div>
+                        
+                        <!-- Batch Number Section -->
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 700;">Batch / Lot Number</div>
+                                <div style="font-size: 20px; font-weight: 900; letter-spacing: 1px; margin-top: 4px;">{batch_scanned}</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); border-radius: 50%; min-width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🏷️</div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🏷️</div>
                     </div>
                     """, unsafe_allow_html=True
                 )
@@ -248,9 +250,9 @@ else:
     search = st.text_input("🔍 Search by Chemical Name or Batch Number...", placeholder="Type to filter...")
     
     display_df = df.copy()
-    if search:
-        display_df = display_df[display_df['Chemical Name'].str.contains(search, case=False, na=False) | 
-                                display_df['Batch_Number'].str.contains(search, case=False, na=False)]
+    if search and 'Chemical Name' in display_df.columns:
+        display_df = display_df[display_df['Chemical Name'].astype(str).str.contains(search, case=False, na=False) | 
+                                display_df['Batch_Number'].astype(str).str.contains(search, case=False, na=False)]
     
     st.dataframe(
         display_df,

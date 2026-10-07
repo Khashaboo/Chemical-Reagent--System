@@ -7,84 +7,45 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="centered")
+st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
 
 # Initialize Session State Memory
 if 'demo_saved_data' not in st.session_state:
     st.session_state.demo_saved_data = {}
 
-# 2. MOBILE-FIRST ENTERPRISE CSS
+# 2. ENTERPRISE CSS & APP STYLING
 st.markdown("""
 <style>
     /* App background */
-    .stApp { background-color: #F4F6F8; }
+    .stApp { background-color: #F8F9FA; font-family: 'Segoe UI', Roboto, sans-serif; }
     
-    /* Align Logo Image to the Top Left */
-    [data-testid="stImage"] {
-        display: flex;
-        justify-content: flex-start;
-        margin-bottom: -10px;
-    }
+    /* Clean up the Top Header padding */
+    .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
     
-    /* Centered Mobile Typography */
-    .header-sub {
-        text-align: center;
-        color: #7D7D7D;
-        font-size: 1rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        margin-bottom: 5px;
-        margin-top: 20px;
-    }
-    .header-title {
-        text-align: center;
-        color: #1A1A1A;
-        font-size: 2.2rem !important;
-        font-weight: 800;
-        line-height: 1.2;
-        margin-bottom: 25px;
-    }
-    
-    /* Native App Card Style for Batch Number */
-    .batch-card {
+    /* Segmented Control / Radio Button Styling for the View Switcher */
+    div.row-widget.stRadio > div {
         background-color: #FFFFFF;
-        padding: 25px 15px;
-        border-radius: 16px;
-        border-top: 6px solid #E65100;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.06);
-        text-align: center;
-        margin-bottom: 25px;
+        border-radius: 12px;
+        padding: 5px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid #E0E0E0;
     }
-    .batch-label {
-        margin: 0;
-        color: #8E8E8E;
-        font-size: 0.9rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .batch-value {
-        margin: 10px 0 0 0;
-        color: #E65100;
-        font-size: 2.4rem;
-        font-weight: 900;
-        letter-spacing: 1.5px;
-    }
-
-    /* Primary Button Styling */
+    
+    /* Primary Save Button */
     div.stButton > button[kind="primary"] {
-        background-color: #E65100;
+        background: linear-gradient(135deg, #E65100, #F44336);
         color: white;
         border: none;
-        border-radius: 8px;
-        padding: 0.6rem;
+        border-radius: 12px;
+        padding: 0.75rem;
         font-weight: 700;
         font-size: 1.1rem;
-        box-shadow: 0 4px 10px rgba(230,81,0,0.2);
+        box-shadow: 0 4px 12px rgba(230,81,0,0.3);
+        transition: all 0.3s ease;
     }
     div.stButton > button[kind="primary"]:hover {
-        background-color: #BF360C;
+        box-shadow: 0 6px 16px rgba(230,81,0,0.4);
+        transform: translateY(-1px);
     }
     
     /* Hide Streamlit Watermarks */
@@ -122,115 +83,155 @@ query_params = st.query_params
 batch_scanned = query_params.get("batch")
 
 # ==========================================
-# MODE 1: MOBILE SCANNER VIEW
+# HEADER: LOGO (TOP LEFT) & VIEW SWITCHER
 # ==========================================
-if batch_scanned:
+col_logo, col_spacer, col_toggle = st.columns([1, 1, 2])
+with col_logo:
     try:
-        st.image("marc_logo.png", width=120)
+        # Perfectly aligned top-left logo
+        st.image("marc_logo.png", width=140)
     except:
-        pass 
-    
-    reagent_row = df[df['Batch\\Lot Number'] == batch_scanned]
-    
-    if reagent_row.empty:
-        st.error(f"❌ Batch '{batch_scanned}' not found in the database.")
-    else:
-        reagent = reagent_row.iloc[0].copy()
-        
-        if batch_scanned in st.session_state.demo_saved_data:
-            override = st.session_state.demo_saved_data[batch_scanned]
-            reagent['Chemical Code'] = override['code']
-            reagent['Open Date'] = override['open_date']
-            reagent['EXP Date'] = override['exp_date']
-        
-        current_open_date = safe_parse_date(reagent.get('Open Date', ''))
-        current_exp_date = safe_parse_date(reagent.get('EXP Date', reagent.get('Exp Date', '')))
-        current_code = str(reagent.get('Chemical Code', ''))
-        if current_code == "nan": current_code = ""
-        reagent_name = str(reagent.get('Reagent Name', 'Unknown Reagent'))
-        if reagent_name == "nan": reagent_name = "Unknown Reagent"
+        st.markdown("<h3 style='margin:0; color:#1A1A1A;'>MARC</h3>", unsafe_allow_html=True)
 
-        # Centered Headers
-        st.markdown(f"<p class='header-sub'>🧪 Reagent Verification</p>", unsafe_allow_html=True)
-        st.markdown(f"<h1 class='header-title'>{reagent_name}</h1>", unsafe_allow_html=True)
-        
-        # Native Mobile Card for Batch Number
-        st.markdown(
-            f"""
-            <div class="batch-card">
-                <p class="batch-label">🏷️ Batch / Lot Number</p>
-                <h1 class="batch-value">{batch_scanned}</h1>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        
-        # Status Alert
-        days_left = (current_exp_date - datetime.now().date()).days
-        if days_left < 0:
-            st.error(f"🚨 **EXPIRED** • {abs(days_left)} days ago • DO NOT USE", icon="🚫")
-        elif days_left <= 7:
-            st.warning(f"⚠️ **EXPIRING SOON** • {days_left} days remaining", icon="⚠️")
-        else:
-            st.success(f"✅ **VALID** • {days_left} days remaining", icon="✅")
-            
-        st.write("") # Spacer
-        
-        # Form
-        st.markdown("#### 📝 Edit Details")
-        with st.form("edit_reagent_form", border=True):
-            new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
-            
-            # Streamlit automatically stacks columns on small screens
-            c1, c2 = st.columns(2)
-            with c1:
-                new_open_date = st.date_input("Open Date", value=current_open_date)
-            with c2:
-                new_exp_date = st.date_input("Exp Date", value=current_exp_date)
-                
-            submitted = st.form_submit_button("💾 Save Updates", type="primary", use_container_width=True)
-            if submitted:
-                st.session_state.demo_saved_data[batch_scanned] = {
-                    'code': new_code,
-                    'open_date': str(new_open_date),
-                    'exp_date': str(new_exp_date)
-                }
-                st.rerun()
+with col_toggle:
+    # Default to Mobile View if a QR was scanned, otherwise Desktop View
+    default_view = 0 if batch_scanned else 1
+    view_mode = st.radio(
+        "Display Mode", 
+        ["📱 Mobile App View", "💻 Desktop Dashboard"], 
+        horizontal=True, 
+        index=default_view,
+        label_visibility="collapsed"
+    )
 
-        st.write("") # Spacer
-        
-        # Documents
-        st.markdown("#### 📑 Safety Documents")
-        d1, d2 = st.columns(2)
-        msds_val = str(reagent.get('MSDS Link', ''))
-        coa_val = str(reagent.get('CoA Link', ''))
-        
-        with d1:
-            if msds_val and msds_val.lower() != "nan":
-                st.link_button("📄 View MSDS", msds_val, use_container_width=True)
-            else:
-                st.button("📄 MSDS Not Available", disabled=True, use_container_width=True)
-        with d2:
-            if coa_val and coa_val.lower() != "nan":
-                st.link_button("🔬 View CoA", coa_val, use_container_width=True)
-            else:
-                st.button("🔬 CoA Not Available", disabled=True, use_container_width=True)
+st.write("") # Spacer
+st.divider()
 
 # ==========================================
-# MODE 2: DESKTOP DASHBOARD
+# MODE 1: NATIVE MOBILE APP VIEW
+# ==========================================
+if view_mode == "📱 Mobile App View":
+    
+    # We use a center column to restrict width so it looks like a phone app even on desktop
+    _, app_col, _ = st.columns([1, 2, 1])
+    
+    with app_col:
+        # Show search if they didn't scan a QR
+        if not batch_scanned:
+            batch_scanned = st.selectbox("🔍 Select or search for a Batch Number:", df["Batch\\Lot Number"].tolist())
+            
+        if batch_scanned:
+            reagent_row = df[df['Batch\\Lot Number'] == batch_scanned]
+            
+            if reagent_row.empty:
+                st.error(f"❌ Batch '{batch_scanned}' not found.")
+            else:
+                reagent = reagent_row.iloc[0].copy()
+                
+                if batch_scanned in st.session_state.demo_saved_data:
+                    override = st.session_state.demo_saved_data[batch_scanned]
+                    reagent['Chemical Code'] = override['code']
+                    reagent['Open Date'] = override['open_date']
+                    reagent['EXP Date'] = override['exp_date']
+                
+                current_open_date = safe_parse_date(reagent.get('Open Date', ''))
+                current_exp_date = safe_parse_date(reagent.get('EXP Date', reagent.get('Exp Date', '')))
+                current_code = str(reagent.get('Chemical Code', ''))
+                if current_code == "nan": current_code = ""
+                reagent_name = str(reagent.get('Reagent Name', 'Unknown Reagent'))
+                if reagent_name == "nan": reagent_name = "Unknown Reagent"
+
+                days_left = (current_exp_date - datetime.now().date()).days
+                
+                # Determine Colors based on Poka-Yoke Status
+                if days_left < 0:
+                    status_color, status_icon, status_text = "#F44336", "🚨", "EXPIRED"
+                    banner_gradient = "linear-gradient(135deg, #D32F2F, #B71C1C)"
+                elif days_left <= 7:
+                    status_color, status_icon, status_text = "#FF9800", "⚠️", "WARNING"
+                    banner_gradient = "linear-gradient(135deg, #F57C00, #E65100)"
+                else:
+                    status_color, status_icon, status_text = "#4CAF50", "✅", "VALID"
+                    banner_gradient = "linear-gradient(135deg, #43A047, #2E7D32)"
+
+                # --- NATIVE APP UI: HERO SECTION & CARDS ---
+                st.markdown(f"<h2 style='text-align: center; margin-bottom: 20px; color: #1E1E1E; font-weight: 800;'>{reagent_name}</h2>", unsafe_allow_html=True)
+                
+                # App Banner Card (Matches EVA App Check-In Card)
+                st.markdown(
+                    f"""
+                    <div style="background: {banner_gradient}; border-radius: 16px; padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                        <div>
+                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; font-weight: 600;">Batch / Lot Number</div>
+                            <div style="font-size: 26px; font-weight: 900; letter-spacing: 1px; margin-top: 5px;">{batch_scanned}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; font-size: 22px;">🏷️</div>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+                
+                # App Metric Cards (Matches EVA App Circular Metrics)
+                st.markdown(
+                    f"""
+                    <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                        <div style="flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;">
+                            <div style="font-size: 28px; margin-bottom: 5px; color: {status_color};">{status_icon}</div>
+                            <div style="font-size: 13px; font-weight: 800; color: #333; letter-spacing: 0.5px;">{status_text}</div>
+                        </div>
+                        <div style="flex: 1; background: white; border-radius: 16px; padding: 15px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #EBEBEB;">
+                            <div style="font-size: 24px; font-weight: 900; color: {status_color}; margin-bottom: 2px;">{abs(days_left)}</div>
+                            <div style="font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.5px; text-transform: uppercase;">Days { "Remaining" if days_left >= 0 else "Ago" }</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True
+                )
+                
+                # --- NATIVE APP UI: FORM ---
+                st.markdown("#### 📝 Edit Details")
+                with st.form("edit_reagent_form", border=True):
+                    new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
+                    
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        new_open_date = st.date_input("Open Date", value=current_open_date)
+                    with c2:
+                        new_exp_date = st.date_input("Exp Date", value=current_exp_date)
+                        
+                    submitted = st.form_submit_button("💾 Save Updates", type="primary", use_container_width=True)
+                    if submitted:
+                        st.session_state.demo_saved_data[batch_scanned] = {
+                            'code': new_code,
+                            'open_date': str(new_open_date),
+                            'exp_date': str(new_exp_date)
+                        }
+                        st.rerun()
+
+                st.write("") 
+                
+                # --- NATIVE APP UI: DOCUMENTS ---
+                st.markdown("#### 📑 Safety Documents")
+                d1, d2 = st.columns(2)
+                msds_val = str(reagent.get('MSDS Link', ''))
+                coa_val = str(reagent.get('CoA Link', ''))
+                
+                with d1:
+                    if msds_val and msds_val.lower() != "nan":
+                        st.link_button("📄 View MSDS", msds_val, use_container_width=True)
+                    else:
+                        st.button("📄 MSDS Not Available", disabled=True, use_container_width=True)
+                with d2:
+                    if coa_val and coa_val.lower() != "nan":
+                        st.link_button("🔬 View CoA", coa_val, use_container_width=True)
+                    else:
+                        st.button("🔬 CoA Not Available", disabled=True, use_container_width=True)
+
+
+# ==========================================
+# MODE 2: DESKTOP DASHBOARD VIEW
 # ==========================================
 else:
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        try:
-            st.image("marc_logo.png", width=180)
-        except:
-            pass
-    with col2:
-        st.title("Bioequivalence Lab Reagents")
-        st.write("Centralized inventory management and compliance dashboard.")
-    
-    st.divider()
+    st.title("Bioequivalence Lab Reagents")
+    st.write("Centralized inventory management and compliance dashboard.")
     
     m1, m2, m3 = st.columns(3)
     total_reagents = len(df)

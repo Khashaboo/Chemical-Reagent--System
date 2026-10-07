@@ -136,11 +136,11 @@ if batch_scanned:
             submitted = st.form_submit_button("💾 Save Updates", type="primary", use_container_width=True)
             
             if submitted:
-                # Save to session state to simulate a database update
+                # Save to session state as strings to avoid Pandas TypeError
                 st.session_state.demo_saved_data[batch_scanned] = {
                     'code': new_code,
-                    'open_date': new_open_date,
-                    'exp_date': new_exp_date
+                    'open_date': str(new_open_date),
+                    'exp_date': str(new_exp_date)
                 }
                 # Rerun the app instantly to show the updated Red/Green status
                 st.rerun()
@@ -185,7 +185,7 @@ else:
     total_reagents = len(df)
     m1.metric(label="Total Active Batches", value=total_reagents)
     m2.metric(label="Compliance Status", value="Ready for Audit")
-    m3.metric(label="System Environment", value="Cloud Prototype")
+    m3.metric(label="System Environment", value="First Prototype")
     
     st.markdown("<br>", unsafe_allow_html=True)
     

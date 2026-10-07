@@ -7,7 +7,7 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="BE-Chemicals System", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="BE Chemicals", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
 
 # Initialize Session State Memory (Temporary for Prototype)
 if 'demo_saved_data' not in st.session_state:
@@ -63,7 +63,7 @@ def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
     df.columns = df.columns.str.strip()
     
-    # Matching exact column names from Google Sheet
+    # Matching exact column names from Google Sheet, using "Opened By"
     critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date After openning", "Opened By", "MSDS Link", "CoA Link"]
     for col in critical_cols:
         if col not in df.columns:
@@ -83,8 +83,8 @@ def safe_parse_date(date_val):
 query_params = st.query_params
 batch_scanned = query_params.get("batch")
 
-# Team Signatures List
-signatures_list = [
+# Team Members List
+team_members = [
     "Not Signed", 
     "ElZahraa Mostafa", 
     "Osama Gamal", 
@@ -139,11 +139,11 @@ if view_mode == "📱 Mobile App View":
             else:
                 reagent = reagent_row.iloc[0].copy()
                 
-                # Load temporary edits if saved in demo mode
+                # Load temporary edits using exact Google Sheet column names
                 if batch_scanned in st.session_state.demo_saved_data:
                     override = st.session_state.demo_saved_data[batch_scanned]
-                    reagent['Chemical Code'] = override['code']
-                    reagent['Open Date'] = override['open_date']
+                    reagent['Chemical Code'] = override['Chemical Code']
+                    reagent['Open Date'] = override['Open Date']
                     reagent['EXP Date After openning'] = override['EXP Date After openning']
                     reagent['Opened By'] = override['Opened By']
                 
@@ -157,9 +157,10 @@ if view_mode == "📱 Mobile App View":
                 reagent_name = str(reagent.get('Reagent Name', 'Unknown Reagent'))
                 if reagent_name == "nan": reagent_name = "Unknown Reagent"
                 
-                current_sig = str(reagent.get('Opened By', 'Not Signed')).strip()
-                if current_sig == "nan" or current_sig == "": current_sig = "Not Signed"
-                sig_index = signatures_list.index(current_sig) if current_sig in signatures_list else 0
+                # Fetch "Opened By" data
+                current_opened_by = str(reagent.get('Opened By', 'Not Signed')).strip()
+                if current_opened_by == "nan" or current_opened_by == "": current_opened_by = "Not Signed"
+                opened_by_index = team_members.index(current_opened_by) if current_opened_by in team_members else 0
 
                 # Date calculations
                 days_left = (current_exp_date - datetime.now().date()).days
@@ -210,8 +211,7 @@ if view_mode == "📱 Mobile App View":
                 st.markdown("#### 📝 Edit Details")
                 with st.form("edit_reagent_form", border=True):
                     
-                    # Updated Label to "Opened by:"
-                    new_signature = st.selectbox("Opened by:", signatures_list, index=sig_index)
+                    new_opened_by = st.selectbox("Opened by:", team_members, index=opened_by_index)
                     new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
                     
                     c1, c2 = st.columns(2)
@@ -222,11 +222,12 @@ if view_mode == "📱 Mobile App View":
                         
                     submitted = st.form_submit_button("💾 Save & Sign", type="primary", use_container_width=True)
                     if submitted:
+                        # Storing exactly with the matching Google Sheet keys
                         st.session_state.demo_saved_data[batch_scanned] = {
-                            'code': new_code,
-                            'open_date': str(new_open_date),
-                            'exp_date': str(new_exp_date),
-                            'signature': new_signature
+                            'Chemical Code': new_code,
+                            'Open Date': str(new_open_date),
+                            'EXP Date After openning': str(new_exp_date),
+                            'Opened By': new_opened_by
                         }
                         st.rerun()
 

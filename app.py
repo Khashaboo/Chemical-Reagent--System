@@ -7,9 +7,9 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 # 1. PAGE CONFIGURATION
-st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="BE-Chemicals System", page_icon="🧪", layout="wide", initial_sidebar_state="collapsed")
 
-# Initialize Session State Memory
+# Initialize Session State Memory (Temporary for Prototype)
 if 'demo_saved_data' not in st.session_state:
     st.session_state.demo_saved_data = {}
 
@@ -64,7 +64,7 @@ def load_data():
     df.columns = df.columns.str.strip()
     
     # Matching exact column names from Google Sheet
-    critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date After openning", "Signature", "MSDS Link", "CoA Link"]
+    critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date After openning", "Opened By", "MSDS Link", "CoA Link"]
     for col in critical_cols:
         if col not in df.columns:
             df[col] = ""
@@ -144,8 +144,8 @@ if view_mode == "📱 Mobile App View":
                     override = st.session_state.demo_saved_data[batch_scanned]
                     reagent['Chemical Code'] = override['code']
                     reagent['Open Date'] = override['open_date']
-                    reagent['EXP Date After openning'] = override['exp_date']
-                    reagent['Signature'] = override['signature']
+                    reagent['EXP Date After openning'] = override['EXP Date After openning']
+                    reagent['Opened By'] = override['Opened By']
                 
                 # Parse Dates safely
                 current_open_date = safe_parse_date(reagent.get('Open Date', ''))
@@ -157,11 +157,11 @@ if view_mode == "📱 Mobile App View":
                 reagent_name = str(reagent.get('Reagent Name', 'Unknown Reagent'))
                 if reagent_name == "nan": reagent_name = "Unknown Reagent"
                 
-                current_sig = str(reagent.get('Signature', 'Not Signed')).strip()
+                current_sig = str(reagent.get('Opened By', 'Not Signed')).strip()
                 if current_sig == "nan" or current_sig == "": current_sig = "Not Signed"
                 sig_index = signatures_list.index(current_sig) if current_sig in signatures_list else 0
 
-                # Date calculations executed OUTSIDE of the f-string to prevent SyntaxErrors
+                # Date calculations
                 days_left = (current_exp_date - datetime.now().date()).days
                 abs_days_left = abs(days_left)
                 days_label = "Remaining" if days_left >= 0 else "Ago"
@@ -210,7 +210,8 @@ if view_mode == "📱 Mobile App View":
                 st.markdown("#### 📝 Edit Details")
                 with st.form("edit_reagent_form", border=True):
                     
-                    new_signature = st.selectbox("Analyst Signature (Required)", signatures_list, index=sig_index)
+                    # Updated Label to "Opened by:"
+                    new_signature = st.selectbox("Opened by:", signatures_list, index=sig_index)
                     new_code = st.text_input("Chemical Code", value=current_code, placeholder="e.g., CHM-001")
                     
                     c1, c2 = st.columns(2)

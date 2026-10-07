@@ -9,6 +9,10 @@ ssl._create_default_https_context = ssl._create_unverified_context
 # 1. PAGE CONFIGURATION
 st.set_page_config(page_title="MARC Reagent OS", page_icon="🧪", layout="wide")
 
+# Initialize Session State Memory (Simulates database writes for the demo)
+if 'demo_saved_data' not in st.session_state:
+    st.session_state.demo_saved_data = {}
+
 # 2. CLEAN CSS INJECTION
 st.markdown("""
 <style>
@@ -25,6 +29,7 @@ st.markdown("""
     div.stButton > button[kind="primary"]:hover {
         background-color: #BF360C;
     }
+    /* Hide default Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
@@ -36,10 +41,9 @@ SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQopdi6UaQgJKJL
 @st.cache_data(ttl=30)
 def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
-    # Strip accidental spaces from headers
     df.columns = df.columns.str.strip()
     
-    # Safely ensure critical columns exist so the app never crashes
+    # Safely ensure critical columns exist
     critical_cols = ["Batch\\Lot Number", "Chemical Code", "Reagent Name", "Open Date", "EXP Date", "MSDS Link", "CoA Link"]
     for col in critical_cols:
         if col not in df.columns:
@@ -63,7 +67,6 @@ batch_scanned = query_params.get("batch")
 # MODE 1: MOBILE SCANNER VIEW
 # ==========================================
 if batch_scanned:
-    # Safely load the logo if it exists
     try:
         st.image("marc_logo.png", width=150)
     except:
@@ -74,9 +77,16 @@ if batch_scanned:
     if reagent_row.empty:
         st.error(f"❌ Batch '{batch_scanned}' not found in the database.")
     else:
-        reagent = reagent_row.iloc[0]
+        # Create a copy so we can apply our demo edits to it
+        reagent = reagent_row.iloc[0].copy()
         
-        # Using .get() prevents KeyErrors if column names change slightly
+        # Override with demo data if the user has hit 'Save'
+        if batch_scanned in st.session_state.demo_saved_data:
+            override = st.session_state.demo_saved_data[batch_scanned]
+            reagent['Chemical Code'] = override['code']
+            reagent['Open Date'] = override['open_date']
+            reagent['EXP Date'] = override['exp_date']
+        
         current_open_date = safe_parse_date(reagent.get('Open Date', ''))
         current_exp_date = safe_parse_date(reagent.get('EXP Date', reagent.get('Exp Date', '')))
         
@@ -89,7 +99,17 @@ if batch_scanned:
         # Header Section
         st.subheader("🧪 Reagent Verification")
         st.title(reagent_name)
-        st.caption(f"**Batch/Lot:** {batch_scanned}")
+        
+        # MAKE BATCH NUMBER HUGE AND CLEAR
+        st.markdown(
+            f"""
+            <div style="background-color: #EEEEEE; padding: 15px; border-radius: 8px; border-left: 6px solid #E65100; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #333;">🏷️ Batch/Lot Number:</h3>
+                <h1 style="margin: 0; color: #E65100; font-size: 2.5rem;">{batch_scanned}</h1>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
         
         # Status Card (Poka-Yoke)
         days_left = (current_exp_date - datetime.now().date()).days
@@ -114,8 +134,16 @@ if batch_scanned:
                 new_exp_date = st.date_input("Exp Date (After Opening)", value=current_exp_date)
                 
             submitted = st.form_submit_button("💾 Save Updates", type="primary", use_container_width=True)
+            
             if submitted:
-                st.info("System is in Prototype Mode. Google Service Account API required to write data back.")
+                # Save to session state to simulate a database update
+                st.session_state.demo_saved_data[batch_scanned] = {
+                    'code': new_code,
+                    'open_date': new_open_date,
+                    'exp_date': new_exp_date
+                }
+                # Rerun the app instantly to show the updated Red/Green status
+                st.rerun()
 
         st.divider()
         

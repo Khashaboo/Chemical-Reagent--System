@@ -18,6 +18,15 @@ st.markdown("""
 <style>
     .stApp { background-color: #F8F9FA; font-family: 'Segoe UI', Roboto, sans-serif; }
     .block-container { padding-top: 1.5rem; padding-bottom: 2rem; }
+    
+    /* Hero Title Styling - Safe from mobile HTML sanitization */
+    .hero-sub {
+        text-align: center; color: #7D7D7D; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px;
+    }
+    .hero-title {
+        text-align: center; color: #1A1A1A; font-size: 2.2rem !important; font-weight: 900; margin-bottom: 20px; line-height: 1.2;
+    }
+    
     div.row-widget.stRadio > div {
         background-color: #FFFFFF;
         border-radius: 12px;
@@ -52,6 +61,8 @@ SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQopdi6UaQgJKJL
 @st.cache_data(ttl=10)
 def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
+    df.dropna(how='all', inplace=True) # Drop any accidental blank rows
+    
     # Standardize columns to fixed positional names
     expected_cols = [
         "Chemical Name", 
@@ -137,13 +148,14 @@ if view_mode == "📱 Mobile App View":
             else:
                 reagent = reagent_row.iloc[0].copy()
                 
+                # Load temporary overrides with .get() safety
                 if batch_scanned in st.session_state.demo_saved_data:
                     override = st.session_state.demo_saved_data[batch_scanned]
-                    reagent['Chemical Name'] = override['Chemical Name']
-                    reagent['Chemical Code'] = override['Chemical Code']
-                    reagent['Open Date'] = override['Open Date']
-                    reagent['EXP Date After openning'] = override['EXP Date After openning']
-                    reagent['Opened By'] = override['Opened By']
+                    reagent['Chemical Name'] = override.get('Chemical Name', reagent.get('Chemical Name', ''))
+                    reagent['Chemical Code'] = override.get('Chemical Code', reagent.get('Chemical Code', ''))
+                    reagent['Open Date'] = override.get('Open Date', reagent.get('Open Date', ''))
+                    reagent['EXP Date After openning'] = override.get('EXP Date After openning', reagent.get('EXP Date After openning', ''))
+                    reagent['Opened By'] = override.get('Opened By', reagent.get('Opened By', ''))
                 
                 current_open_date = safe_parse_date(reagent.get('Open Date', ''))
                 current_exp_date = safe_parse_date(reagent.get('EXP Date After openning', ''))
@@ -174,9 +186,9 @@ if view_mode == "📱 Mobile App View":
                     status_color, status_icon, status_text = "#4CAF50", "✅", "VALID"
                     banner_gradient = "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: HERO SECTION ---
-                st.markdown(f"<p style='text-align: center; color: #7D7D7D; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0px;'>🧪 Reagent Verification</p>", unsafe_allow_html=True)
-                st.markdown(f"<h1 style='text-align: center; color: #1A1A1A; font-size: 2.2rem !important; font-weight: 800; margin-bottom: 20px;'>{chemical_name}</h1>", unsafe_allow_html=True)
+                # --- NATIVE APP UI: HERO SECTION (BULLETPROOF TITLE) ---
+                st.markdown(f"<div class='hero-sub'>🧪 Reagent Verification</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='hero-title'>{chemical_name}</div>", unsafe_allow_html=True)
                 
                 st.markdown(
                     f"""

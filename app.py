@@ -63,7 +63,6 @@ def load_data():
     df = pd.read_csv(SHEET_CSV_URL)
     df.columns = df.columns.str.strip()
     
-    # Updated to look for "Chemical Name" instead of "Reagent Name"
     critical_cols = ["Batch\\Lot Number", "Chemical Code", "Chemical Name", "Open Date", "EXP Date After openning", "Opened By", "MSDS Link", "CoA Link"]
     for col in critical_cols:
         if col not in df.columns:
@@ -139,31 +138,29 @@ if view_mode == "📱 Mobile App View":
             else:
                 reagent = reagent_row.iloc[0].copy()
                 
-                # Load temporary edits using updated keys
                 if batch_scanned in st.session_state.demo_saved_data:
                     override = st.session_state.demo_saved_data[batch_scanned]
                     reagent['Chemical Code'] = override['Chemical Code']
+                    reagent['Chemical Name'] = override.get('Chemical Name', reagent.get('Chemical Name', ''))
                     reagent['Open Date'] = override['Open Date']
                     reagent['EXP Date After openning'] = override['EXP Date After openning']
                     reagent['Opened By'] = override['Opened By']
                 
-                # Parse Dates safely
                 current_open_date = safe_parse_date(reagent.get('Open Date', ''))
                 current_exp_date = safe_parse_date(reagent.get('EXP Date After openning', reagent.get('EXP Date', '')))
                 
                 current_code = str(reagent.get('Chemical Code', ''))
                 if current_code == "nan": current_code = ""
                 
-                # Read Chemical Name instead of Reagent Name
-                chemical_name = str(reagent.get('Chemical Name', 'Unknown Chemical'))
-                if chemical_name == "nan": chemical_name = "Unknown Chemical"
+                # Robust extraction of Chemical Name
+                chemical_name = str(reagent.get('Chemical Name', '')).strip()
+                if not chemical_name or chemical_name.lower() == "nan":
+                    chemical_name = "Reagent Verification"
                 
-                # Fetch "Opened By" data
                 current_opened_by = str(reagent.get('Opened By', 'Not Signed')).strip()
                 if current_opened_by == "nan" or current_opened_by == "": current_opened_by = "Not Signed"
                 opened_by_index = team_members.index(current_opened_by) if current_opened_by in team_members else 0
 
-                # Date calculations
                 days_left = (current_exp_date - datetime.now().date()).days
                 abs_days_left = abs(days_left)
                 days_label = "Remaining" if days_left >= 0 else "Ago"
@@ -178,8 +175,9 @@ if view_mode == "📱 Mobile App View":
                     status_color, status_icon, status_text = "#4CAF50", "✅", "VALID"
                     banner_gradient = "linear-gradient(135deg, #43A047, #2E7D32)"
 
-                # --- NATIVE APP UI: HERO SECTION ---
-                st.markdown(f"<h2 style='text-align: center; margin-bottom: 20px; color: #1E1E1E; font-weight: 800;'>{chemical_name}</h2>", unsafe_allow_html=True)
+                # --- NATIVE APP UI: HERO SECTION (PROMINENT CHEMICAL NAME) ---
+                st.markdown(f"<p style='text-align: center; color: #7D7D7D; font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0px;'>🧪 Reagent Verification</p>", unsafe_allow_html=True)
+                st.markdown(f"<h1 style='text-align: center; color: #1A1A1A; font-size: 2.2rem !important; font-weight: 800; margin-bottom: 20px;'>{chemical_name}</h1>", unsafe_allow_html=True)
                 
                 st.markdown(
                     f"""
@@ -224,6 +222,7 @@ if view_mode == "📱 Mobile App View":
                     submitted = st.form_submit_button("💾 Save & Sign", type="primary", use_container_width=True)
                     if submitted:
                         st.session_state.demo_saved_data[batch_scanned] = {
+                            'Chemical Name': chemical_name,
                             'Chemical Code': new_code,
                             'Open Date': str(new_open_date),
                             'EXP Date After openning': str(new_exp_date),
